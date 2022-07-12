@@ -1,0 +1,2 @@
+# BayesOpt
+ Bayesian Optimisation Class
