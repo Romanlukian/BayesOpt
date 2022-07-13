@@ -1,13 +1,10 @@
-classdef ( Abstract = true ) bayesOpt 
-    % Bayesian optimisation abstract class
+classdef bayesOpt 
+    % Bayesian optimisation class
 
-    properties ( Abstract = true, SetAccess = protected  )
+    properties ( SetAccess = protected  )
         AcqFcn (1,1)   string
     end % abstract and protected properties
-
+     
     methods
     end % Concrete ordinary methods
-
-    methods ( Abstract = true )
-    end % abstract methods signatures
 end % classdef
