@@ -1,4 +1,4 @@
-classdef ( Abstract = true ) surrogateModel
+classdef ( Abstract = true ) surrogateModel < handle
     
     properties ( SetAccess = protected, Abstract = true )
         X           double                                                  % Input data
