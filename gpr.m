@@ -157,7 +157,7 @@ classdef gpr < surrogateModel
             %--------------------------------------------------------------
             arguments
                 obj   (1,1)     gpr
-                Xnew            double           = obj.Xc     
+                Xnew            double           = obj.X     
                 Alpha           double  = 0.05
             end
             Xnew = obj.code( Xnew );
