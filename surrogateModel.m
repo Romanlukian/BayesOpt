@@ -26,6 +26,7 @@ classdef ( Abstract = true ) surrogateModel < handle
     properties ( SetAccess = protected, Dependent )
         DataOk      logical                                                 % True if data dimensions are consistent
         N           int8                                                    % Number of variables
+        NumPoints   int64                                                   % Number of data points
     end % dependent properties
 
     methods ( Abstract = true )
@@ -129,6 +130,11 @@ classdef ( Abstract = true ) surrogateModel < handle
             % Return number of predictor variables
             N = size( obj.X, 2 );
         end % get.N
+
+        function N = get.NumPoints( obj )
+            % Return number of data points in the training set
+            N = size( obj.X, 1 );
+        end % get.NumPoints
 
         function Ok = get.DataOk( obj )
             % Check consistency of data

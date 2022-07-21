@@ -14,6 +14,7 @@ rf                  - Concrete random forest model. Wrapper for TreeBagger class
 gprFitMethod        - Enumeration class for gpr model fitting methods
 gprPredMethod       - Enumeration class for gpr prediction methods
 kernels             - Enumeration class for supported gaussian process kernel functions
+ei                  - Expected Improvement acquisition function implementation
 
 
 
