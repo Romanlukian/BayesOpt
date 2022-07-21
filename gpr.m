@@ -1,6 +1,10 @@
 classdef gpr < surrogateModel
     % gaussian regression process class
 
+    properties ( Constant = true )
+        ModelType   string    = "GP"
+    end % Abstract constnat properties
+
     properties ( SetAccess = protected )
         X           double
         Y           double
@@ -9,7 +13,16 @@ classdef gpr < surrogateModel
         FitMethod   gprFitMethod    = gprFitMethod( "exact" )
         Yname       string                                                  % Response name 
         Xname       string                                                  % Array of predictor names
-    end % protected and abstract properties
+    end % protected and abstract property definitions
+
+    properties ( SetAccess = protected, Dependent )
+        LenScale    double                                                  % Length scales vector
+        SigmaF      double                                                  % Noise covariance function
+    end % dependent properties
+
+    properties ( Access = protected, Dependent )
+        Cov         double                                                  % Kernel matrix for the training data
+    end % protected dependent properties
 
     methods
         function obj = gpr( X, Y )
@@ -100,13 +113,11 @@ classdef gpr < surrogateModel
             %           ARDexponential           
             %           ARDmatern32              
             %           ARDmatern52             
-            %           ARDrationalQuadratic 
             %--------------------------------------------------------------
             arguments
                 obj     (1,1)   gpr
                 Name    (1,1)   string  = "ARDsquaredExponential"
             end
-
             try
                 K = kernels( Name );
                 obj.Kernel = K;
@@ -124,9 +135,10 @@ classdef gpr < surrogateModel
             % This method makes use of the RegressionGP class. A
             % RegressionGP object is composited in the ModelObj property.
             %
-            % The kernel function and prediction methods can be set using
-            % the setKernel and setPredMethod methods. However, all other
-            % options can be set through the ( Name, Value ) pair list
+            % The kernel function, fit and prediction methods can be set 
+            % using the setKernel and setPredMethod methods. However, all 
+            % other options can be set through the ( Name, Value ) pair 
+            % list for fitrgp().
             %--------------------------------------------------------------
             assert( obj.DataOk,...
                     "X-predictor name vector must have %3.0f entries",...
@@ -164,5 +176,171 @@ classdef gpr < surrogateModel
             [ Ypred, Ysd, Yint ] = predict( obj.ModelObj, Xnew, 'Alpha',...
                                             Alpha );
         end % predict
-    end
+
+        function K = genK( obj, X, Xref )
+            %--------------------------------------------------------------
+            % Generate the kernel matrix
+            %
+            % K = obj.genK( X );
+            %
+            % Input Arguments:
+            %
+            % X --> Input data matrix.
+            %--------------------------------------------------------------
+            arguments 
+                obj     (1,1)       gpr
+                X       (:,:)       double       = obj.X
+                Xref    (:,:)       double       = obj.X
+            end
+            Xc = obj.code( X );
+            Xc_ref = obj.code( Xref );
+            switch obj.Kernel
+                case "ARDsquaredExponential"
+                    K = obj.ardSquaredExponential( Xc, Xc_ref );
+                case "ARDexponential"
+                    K = obj.ardExponential( Xc, Xc_ref );
+                case "ARDmatern32"
+                    K = ardMatern32( Xc, Xc_ref );
+                case "ARDmatern52"
+                    K = ardMatern52( Xc, Xc_ref );
+                otherwise
+                    error( 'Unknown Kernel Type "%s', obj.Kernel );
+            end
+        end % genK
+
+        function S = sigma( obj, X )
+            %--------------------------------------------------------------
+            % Covariance matrix for predictions
+            %
+            % S = obj.sigma( X );
+            %
+            % Input Arguments:
+            %
+            % X --> Location in the Gaussian field to calculate sigma.
+            %--------------------------------------------------------------
+            arguments 
+                obj (1,1)       gpr
+                X   (:,:)       double       = obj.X
+            end
+            %--------------------------------------------------------------
+            % Generate required kernel matrices
+            %--------------------------------------------------------------
+            K = obj.genK( obj.X );
+            Kstar = obj.genK( X, X );
+            KsK = obj.genK( X, obj.X );
+            %--------------------------------------------------------------
+            % Calculate the corresponding covarince matrix
+            %--------------------------------------------------------------
+            S = ( K + obj.SigmaF^2 * eye( obj.NumPoints ) ) \ ...
+                      eye( obj.NumPoints );
+            S = KsK.' * S * KsK;
+            S = Kstar -  S;
+        end % sigma
+    end % ordinary methods signatures
+
+    methods
+        function K = get.Cov( obj )
+            % Return the covariance matrix for the training data
+            K = obj.sigma( obj.X );
+        end
+
+        function L = get.LenScale( obj )
+            % Return the lengthscale parameters
+            L = obj.ModelObj.KernelInformation.KernelParameters;
+            L = L( 1:( end - 1 ) );
+        end
+
+        function SF = get.SigmaF( obj )
+            % Return the estimated noise scale
+            SF = obj.ModelObj.KernelInformation.KernelParameters( end );
+        end
+    end % get/set methods
+
+    methods (  Access = private )
+        function K = ardSquaredExponential( obj, Dc, Xc )
+            %--------------------------------------------------------------
+            % Calculate the Kernel function, for the data supplied
+            %
+            % K = obj.ardSquaredExponential( Dc );
+            %
+            % Input Arguments:
+            %
+            % Dc    -> (Nxp) matrix of coded input data
+            % Xc    -> (Mxp) matrix of coded reference data
+            %--------------------------------------------------------------
+            R = obj.genScaledSqrdResMatrix( Dc, Xc );
+            K = obj.SigmaF^2 .* exp( -0.5 * R );
+        end % ardSquaredExponential
+
+        function K = ardExponential( obj, Dc, Xc )
+            %--------------------------------------------------------------
+            % Calculate the Kernel function, for the data supplied
+            %
+            % K = obj.ardExponential( Dc );
+            %
+            % Input Arguments:
+            %
+            % Dc    -> (Nxp) matrix of coded input data
+            % Xc    -> (Mxp) matrix of coded reference data
+            %--------------------------------------------------------------
+            R = obj.genScaledSqrdResMatrix( Dc, Xc );
+            K = obj.SigmaF^2 .* exp( -sqrt( R ) );
+        end % ardExponential
+
+        function K = ardMatern32( obj, Dc, Xc )
+            %--------------------------------------------------------------
+            % Calculate the Kernel function, for the data supplied
+            %
+            % K = obj.rdMatern32( Dc );
+            %
+            % Input Arguments:
+            %
+            % Dc    -> (Nxp) matrix of coded input data
+            % Xc    -> (Mxp) matrix of coded reference data
+            %--------------------------------------------------------------   
+            R = sqrt( obj.genScaledSqrdResMatrix( Dc, Xc ) );
+            K = obj.SigmaF^2 * ( 1 + sqrt( 3 ) * R ) .* exp( -sqrt( 3 ) * R );            
+        end % ardMatern32
+
+        function K = ardMatern52( obj, Dc, Xc )
+            %--------------------------------------------------------------
+            % Calculate the Kernel function, for the data supplied
+            %
+            % K = obj.ardMatern52( Dc );
+            %
+            % Input Arguments:
+            %
+            % Dc    -> (Nxp) matrix of coded input data
+            % Xc    -> (Mxp) matrix of coded reference data
+            %--------------------------------------------------------------   
+            R = sqrt( obj.genScaledSqrdResMatrix( Dc, Xc ) );
+            K = obj.SigmaF^2 * ( 1 + sqrt( 5 ) * R + ( 5 / 3 ) * R.^2 )...
+                .* exp( -sqrt( 5 ) * R );            
+        end % ardMatern52
+
+        function R = genScaledSqrdResMatrix( obj, Dc, Xc )
+            %--------------------------------------------------------------
+            % Generate sum sqaured residual matrix for data supplied
+            %
+            % R = obj.genScaledSqrdResMatrix( Dc );
+            %
+            % Input Arguments:
+            %
+            % Dc    -> (Nxp) matrix of coded input data
+            % Xc    -> (Mxp) matrix of coded reference data
+            %--------------------------------------------------------------   
+            D = diag( 1 ./ obj.LenScale );
+            Dc = Dc * D;
+            Pxc = size( Xc, 1 );
+            Pdc = size( Dc, 1 );
+            R = zeros( Pxc, Pdc );
+            for Q = 1:Pdc
+                D_q = Dc( Q, : );
+                R( :, Q ) = sum( ( Xc - D_q ).^2, 2 );
+            end
+        end % genScaledSqrdResMatrix
+    end % Private methods signatures
+
+    methods ( Static = true, Access = private )
+    end % Static and private methods
 end % classdef

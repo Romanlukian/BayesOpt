@@ -1,11 +1,19 @@
-classdef ( Abstract = true ) surrogateModel
+classdef ( Abstract = true ) surrogateModel < handle
     
+    properties ( Constant = true, Abstract = true )
+        ModelType   string
+    end % Abstract constnat properties
+
     properties ( SetAccess = protected, Abstract = true )
         X           double                                                  % Input data
         Y           double                                                  % Response data
         Yname       string                                                  % Response name 
         Xname       string                                                  % Array of predictor names
     end % protected and abstract properties
+
+    properties ( Access = protected, Dependent, Abstract = true )
+        Cov         double                                                  % Kernel matrix for the training data
+    end
 
     properties ( SetAccess = protected )
         ModelObj                                                            % Model object
@@ -18,11 +26,13 @@ classdef ( Abstract = true ) surrogateModel
     properties ( SetAccess = protected, Dependent )
         DataOk      logical                                                 % True if data dimensions are consistent
         N           int8                                                    % Number of variables
+        NumPoints   int64                                                   % Number of data points
     end % dependent properties
 
     methods ( Abstract = true )
         obj = trainModel( obj, varargin )
         Y = predict( obj, X, varargin )
+        S = sigma( obj, X, varargin )
     end 
 
     methods
@@ -110,8 +120,8 @@ classdef ( Abstract = true ) surrogateModel
             %
             % X --> (double) data matrix
             %--------------------------------------------------------------
-            [ A, B, M ] = obj.dataCodingInfo( X );
-            Xc = 2 * ( obj.X - M ) ./ ( B - A );
+            [ A, B, M ] = obj.dataCodingInfo( obj.X );
+            Xc = 2 * ( X - M ) ./ ( B - A );
         end % code
     end % protected method signatures
 
@@ -120,6 +130,11 @@ classdef ( Abstract = true ) surrogateModel
             % Return number of predictor variables
             N = size( obj.X, 2 );
         end % get.N
+
+        function N = get.NumPoints( obj )
+            % Return number of data points in the training set
+            N = size( obj.X, 1 );
+        end % get.NumPoints
 
         function Ok = get.DataOk( obj )
             % Check consistency of data
