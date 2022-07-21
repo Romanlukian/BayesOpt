@@ -1,11 +1,19 @@
 classdef ( Abstract = true ) surrogateModel < handle
     
+    properties ( Constant = true, Abstract = true )
+        ModelType   string
+    end % Abstract constnat properties
+
     properties ( SetAccess = protected, Abstract = true )
         X           double                                                  % Input data
         Y           double                                                  % Response data
         Yname       string                                                  % Response name 
         Xname       string                                                  % Array of predictor names
     end % protected and abstract properties
+
+    properties ( Access = protected, Dependent, Abstract = true )
+        Cov         double                                                  % Kernel matrix for the training data
+    end
 
     properties ( SetAccess = protected )
         ModelObj                                                            % Model object
@@ -23,6 +31,7 @@ classdef ( Abstract = true ) surrogateModel < handle
     methods ( Abstract = true )
         obj = trainModel( obj, varargin )
         Y = predict( obj, X, varargin )
+        S = sigma( obj, X, varargin )
     end 
 
     methods
@@ -110,8 +119,8 @@ classdef ( Abstract = true ) surrogateModel < handle
             %
             % X --> (double) data matrix
             %--------------------------------------------------------------
-            [ A, B, M ] = obj.dataCodingInfo( X );
-            Xc = 2 * ( obj.X - M ) ./ ( B - A );
+            [ A, B, M ] = obj.dataCodingInfo( obj.X );
+            Xc = 2 * ( X - M ) ./ ( B - A );
         end % code
     end % protected method signatures
 
