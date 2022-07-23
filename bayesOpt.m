@@ -6,11 +6,12 @@ classdef bayesOpt
         Model    (1,1)   string                                             % Surrogate model type
         X        (:,:)   double                                             % Current sample input data
         Y        (:,1)   double                                             % Current function query data
+        Xnext    (1,:)   double                                             % Next point to query
     end % dependent properties
 
-    properties ( Access = protected )
+    properties ( SetAccess = protected )
         AcqObj   (1,1)                                                      % Acquisition function object
-    end
+    end % Portected properties
     
     methods
         function obj = bayesOpt( AcqFcnObj )
@@ -50,7 +51,7 @@ classdef bayesOpt
             obj.AcqObj.addFcnSample2Data( Xnew, Ynew );
         end % addNewQuery
 
-        function Xmax = acqFcnMaxTemplate( obj, Args )
+        function obj = acqFcnMaxTemplate( obj, Args )
             %--------------------------------------------------------------
             % Optimise the acquisition function given the current training
             % data. The output is the next place to sample the function.
@@ -100,11 +101,16 @@ classdef bayesOpt
                 obj.AcqObj = obj.AcqObj.setBestX( Xmax );
             end
             Problem.x0 = obj.AcqObj.BestX;
-            Xmax = fmincon( Problem );
+            BestX = fmincon( Problem );
+            obj.AcqObj = obj.AcqObj.setBestX( BestX );
         end % acqFcnMaxTemplate
     end % Concrete ordinary methods
 
     methods
+        function Xnext = get.Xnext( obj )
+            Xnext = obj.AcqObj.BestX;
+        end % get.Xnext
+
         function X = get.X( obj )
             % Return the current function query input locations
             X = obj.AcqObj.Data;

@@ -98,7 +98,7 @@ classdef ei < acqFcn
             end
             [ Mu, Sigma ] = obj.ModelObj.predict( X );
             try
-                Z = ( Mu - obj.Fmax - obj.Xi ) ./ Sigma;
+                Z = ( Mu - obj.ModelObj.Fmax - obj.Xi ) ./ Sigma;
             catch 
                 Z = zeros( size( Mu ) );
             end

@@ -1,4 +1,4 @@
-classdef ( Abstract = true) acqFcn 
+classdef ( Abstract = true) acqFcn < handle
     % Interface to Bayesian Optimisation acquisition functions
 
     properties ( Constant = true, Abstract = true)
@@ -11,10 +11,13 @@ classdef ( Abstract = true) acqFcn
     end % protected properties
 
     properties ( SetAccess = protected, Dependent )
-        Fmax     double                                                     % Maximum function evaluation
         Data     double                                                     % Current input training data
         Response double                                                     % Current training response data
     end % dependent properties
+
+    properties ( Access = protected, Dependent )
+        Fmax     double                                                     % Maximum function evaluation
+    end % protected dependent properties
 
     methods ( Abstract = true )
         Y = evalFcn( obj, X )                                               % Evaluate the acquisition function at the points supplied
@@ -73,8 +76,10 @@ classdef ( Abstract = true) acqFcn
 
         function Fmax = get.Fmax( obj )
             % Return best value of acquisition function
-            if ~isinf( obj.BestX )
-                Fmax = obj.ModelObj.predict( obj.BestX );
+            try
+                Fmax = obj.ModelObj.Fmax;
+            catch
+                Fmax = NaN;
             end
         end % get.Fmax
     end % get/set method signatures
