@@ -148,6 +148,7 @@ classdef gpr < surrogateModel
                     "PredictMethod", string( obj.PredMethod ),...
                     "KernelFunction", string( obj.Kernel ),...
                     varargin{:});
+            obj.Trained = true;
         end % trainModel
 
         function [ Ypred, Ysd, Yint ] = predict( obj, Xnew, Alpha )
