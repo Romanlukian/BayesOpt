@@ -17,6 +17,7 @@ classdef ( Abstract = true ) surrogateModel < handle
 
     properties ( SetAccess = protected )
         ModelObj                                                            % Model object
+        Trained     logical         = false                                 % Model trained state flag
     end % protected properties
 
     properties ( Access = protected, Dependent )
@@ -36,6 +37,28 @@ classdef ( Abstract = true ) surrogateModel < handle
     end 
 
     methods
+        function obj = updateModel( obj, Xnew, Ynew )
+            %--------------------------------------------------------------
+            % Update the model based on additional training data
+            %
+            % obj = obj.updateModel( Xnew, Ynew );
+            %
+            % Input Arguments:
+            %
+            % Xnew  --> (double) New input data
+            % Ynew  --> (double) Function query f(Xnew)
+            %--------------------------------------------------------------
+            arguments
+                obj     (1,1)           { mustBeNonempty( obj ) }
+                Xnew    (:,:)   double  { mustBeNonempty( Xnew ) }
+                Ynew    (:,1)   double  { mustBeNonempty( Ynew ) }
+            end
+            Xnew = [ obj.X ; Xnew ];
+            Ynew = [ obj.Y; Ynew];
+            obj = setTrainingData( obj, Xnew, Ynew );
+            obj = obj.trainModel();
+        end % updateModel
+
         function obj = setTrainingData( obj, X, Y )
             %--------------------------------------------------------------
             % Set the training data
@@ -52,6 +75,7 @@ classdef ( Abstract = true ) surrogateModel < handle
                 X           double
                 Y   (:,1)   double
             end
+            obj.Trained = false;
             obj.X = X;
             obj.Y = Y;
         end % setTrainingData
