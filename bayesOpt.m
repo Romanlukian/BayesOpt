@@ -7,6 +7,7 @@ classdef bayesOpt
         X        (:,:)   double                                             % Current sample input data
         Y        (:,1)   double                                             % Current function query data
         Xnext    (1,:)   double                                             % Next point to query
+        ModelObj (1,1)                                                      % Surrogate model object
     end % dependent properties
 
     properties ( SetAccess = protected )
@@ -125,6 +126,11 @@ classdef bayesOpt
             % Return the surrogate model type
             M = obj.AcqObj.ModelObj.ModelType;
         end % get.Model
+
+        function M = get.ModelObj( obj )
+            % Return the surrogate model object
+            M = obj.AcqObj.ModelObj;
+        end % get.ModelObj
 
         function A = get.AcqFcn( obj )
             % Return the acquisition function nane
