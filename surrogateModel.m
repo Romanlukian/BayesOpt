@@ -28,6 +28,8 @@ classdef ( Abstract = true ) surrogateModel < handle
         DataOk      logical                                                 % True if data dimensions are consistent
         N           int8                                                    % Number of variables
         NumPoints   int64                                                   % Number of data points
+        Fmax        double                                                  % Best function query discovered so far
+        Xmax        double                                                  % Location of best function query
     end % dependent properties
 
     methods ( Abstract = true )
@@ -150,6 +152,17 @@ classdef ( Abstract = true ) surrogateModel < handle
     end % protected method signatures
 
     methods
+        function F = get.Fmax( obj )
+            % Return best known function query value to date
+            F = max( obj.Y );
+        end
+
+        function X = get.Xmax( obj )
+            % Return location of best known function query to date
+            [ ~, Idx ] = max( obj.Y );
+            X = obj.X( Idx, : );
+        end
+        
         function N = get.N( obj )
             % Return number of predictor variables
             N = size( obj.X, 2 );
